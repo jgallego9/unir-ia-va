@@ -9,8 +9,14 @@
 % --------------------------------------------------------
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\documentclass[9pt,a4paper,twocolumn,twoside]{rho-class/rho}
+\documentclass[12pt,a4paper,twoside]{rho-class/rho}
 \usepackage[spanish,es-nodecimaldot,es-noindentfirst]{babel}
+\usepackage{booktabs}
+\usepackage{setspace}
+\usepackage[section]{placeins}
+\setstretch{1.5}
+\setlength{\textfloatsep}{16pt plus 3pt minus 3pt}
+\setlength{\floatsep}{14pt plus 3pt minus 3pt}
 
 %----------------------------------------------------------
 % Tipo de documento
@@ -50,10 +56,20 @@
 %----------------------------------------------------------
 
 \begin{abstract}
-    % TODO: Síntesis precisa del objetivo de la actividad, los principales resultados
-    % alcanzados y las conclusiones obtenidas. El lector debe poder comprender el
-    % propósito del laboratorio, los hallazgos más relevantes y las aportaciones
-    % fundamentales del trabajo únicamente con la lectura de este apartado.
+    Se diseñó y evaluó un flujo de mejora de imagen en dos etapas encadenadas para
+    un conjunto de cuatro fotografías nocturnas de baja iluminación extraídas del
+    conjunto de datos \textit{DARK FACE}~\cite{yang2020darkface}. Para la imagen de
+    mayor oscuridad se aplicó corrección gamma ($\gamma = 0{,}40$) seguida de
+    ecualización adaptativa de histograma con limitación de contraste (CLAHE) sobre
+    el canal de luminancia $L^*$ del espacio perceptual CIE-Lab. Para las tres
+    imágenes restantes, el primer paso se sustituyó por una transformación
+    logarítmica normalizada que ofrece mayor gradiente de realce en las regiones de
+    muy baja intensidad. La validación se realizó sobre el canal $L^*$ de CIE-Lab
+    mediante la inspección visual de histogramas y funciones de distribución
+    acumulada (CDF). Los resultados muestran que el encadenamiento de ajuste de intensidad
+    y CLAHE-LAB incrementa sustancialmente la distribución tonal y la riqueza
+    informacional de todas las imágenes analizadas, constituyendo una base sólida
+    para la aplicación de métodos analíticos avanzados en escenas nocturnas.
 \end{abstract}
 
 \keywords{mejora de imágenes, procesamiento digital, histograma, contraste, visión por computador, teledetección}
@@ -93,12 +109,11 @@
 \newpage
 
 %----------------------------------------------------------
-% Inicio del artículo (dos columnas)
+% Inicio del artículo (una columna)
 %----------------------------------------------------------
 
-\twocolumn
-    \maketitle
-    \thispagestyle{firststyle}
+\maketitle
+\thispagestyle{firststyle}
 
 %----------------------------------------------------------
 
@@ -106,9 +121,23 @@
 
     \rhostart{L}a mejora de imágenes constituye una de las etapas fundamentales del procesamiento digital de imágenes, con una influencia directa sobre la calidad, la interpretabilidad y la utilidad de la información visual. Su relevancia abarca disciplinas tan diversas como la medicina, la visión por computador y la teledetección, ámbitos en los que la calidad de la imagen condiciona de manera crítica los resultados de los análisis posteriores.
 
-    % TODO: Ampliar con la contextualización de la relevancia de la mejora de imágenes,
-    % el concepto de preprocesamiento y la justificación de las técnicas examinadas
-    % como herramientas esenciales antes de aplicar métodos analíticos avanzados.
+    El preprocesamiento engloba el conjunto de transformaciones aplicadas sobre la
+    imagen cruda con el fin de reducir artefactos, normalizar las condiciones de
+    captura y optimizar la distribución tonal antes de proceder a tareas analíticas
+    de mayor complejidad —segmentación, detección de objetos, clasificación,
+    etcétera—. En escenas de baja iluminación, donde la información visual
+    relevante se concentra en el extremo oscuro del histograma, esta fase resulta
+    especialmente crítica: sin un realce previo, los detalles de interés quedan
+    ocultos bajo el ruido de cuantización o por la escasa separación de tonos en
+    las regiones poco iluminadas.
+
+    Las técnicas examinadas en este laboratorio —corrección gamma, transformación
+    logarítmica y CLAHE— son herramientas clásicas del procesamiento digital de
+    imágenes que, aplicadas de forma encadenada, permiten maximizar el
+    aprovechamiento del rango dinámico disponible y mejorar la visibilidad de
+    estructuras en condiciones adversas de iluminación, facilitando así la
+    extracción posterior de información por parte tanto de observadores humanos
+    como de sistemas automáticos de visión.
 
 %----------------------------------------------------------
 
@@ -116,47 +145,338 @@
 
     \subsection{Entorno de trabajo y conjunto de imágenes}
 
-        % TODO: Indicar el software de procesamiento utilizado. Describir el conjunto
-        % de imágenes empleadas: origen, resolución y profundidad de color.
+        El procesamiento se realizó en un entorno Python~3 con las bibliotecas
+        OpenCV~4, NumPy y Matplotlib para el tratamiento y la visualización de
+        imágenes. El flujo de trabajo
+        completo se documentó en un cuaderno Jupyter Notebook, garantizando su
+        reproducibilidad íntegra.
+
+        El conjunto de imágenes comprende cuatro fotografías nocturnas extraídas
+        del conjunto de datos \textit{DARK FACE}~\cite{yang2020darkface}, cuyo
+        propósito original es el estudio de la detección de rostros en condiciones
+        de baja iluminación. Las imágenes, identificadas como 1187.png, 1321.png,
+        1457.png y 1619.png, presentan una resolución de 1080 × 720 píxeles,
+        profundidad de color de 8~bits por canal y codificación en tres canales RGB.
+        Las escenas corresponden a interiores y exteriores nocturnos con alto
+        contenido de sombras y valores de luminancia concentrados en el extremo
+        oscuro del histograma.
 
     \subsection{Técnicas de mejora aplicadas}
 
-        % TODO: Detallar las técnicas de mejora de imagen con redacción formal y
-        % general, sin dependencia de lenguajes de programación concretos.
+        Se emplearon tres técnicas de mejora de imagen, seleccionadas en función de
+        las características tonales de cada imagen.
+
+        \textbf{Corrección gamma.} La transformación potencial
+        $s = c \cdot r^{\gamma}$, con $c = 255^{1-\gamma}$ para normalizar la
+        salida al rango $[0, 255]$ y $\gamma < 1$, expande los tonos oscuros
+        comprimiendo los claros~\cite{huang2013agcwd}. Para la imagen~1187, cuya distribución de
+        intensidades se concentra casi íntegramente por debajo de 20, se
+        seleccionó $\gamma = 0{,}40$ con el fin de recuperar estructura en las
+        regiones más oscuras sin saturar las escasas zonas ya iluminadas.
+
+        \textbf{Transformación logarítmica.} La función
+        $s = c \cdot \log_{10}(1 + r)$, con $c = 255 / \log_{10}(256)$ para
+        normalizar la salida al rango $[0, 255]$, proporciona una expansión no
+        lineal del rango oscuro con gradiente de realce más pronunciado que la
+        corrección gamma en las regiones de intensidad muy baja~\cite{drago2003logmapping}. Se aplicó como
+        primera etapa de procesamiento para las imágenes~1321, 1457 y~1619.
+
+        \textbf{Ecualización adaptativa de histograma con limitación de contraste
+        (CLAHE).} A diferencia de la ecualización global de histograma, CLAHE
+        opera localmente sobre regiones de la imagen (\textit{tiles}) y limita la
+        ganancia máxima mediante un umbral de recorte (\textit{clip limit}),
+        evitando la amplificación excesiva del ruido~\cite{zuiderveld1994clahe}. Con el fin de actuar sobre la
+        luminancia perceptual de la imagen sin alterar la cromaticidad, CLAHE se
+        aplicó exclusivamente sobre el canal~$L^*$ del espacio de color CIE-Lab,
+        con los parámetros clipLimit\,=\,2{,}0 y tileGridSize\,=\,8\,×\,8 para
+        todas las imágenes.
 
     \subsection{Procedimiento experimental}
 
-        % TODO: Exponer el procedimiento paso a paso, asegurando claridad y
-        % replicabilidad. Justificar cada decisión metodológica adoptada.
+        El flujo de procesamiento aplicado a cada imagen consta de las cuatro
+        etapas siguientes.
+
+        \begin{enumerate}
+            \item \textbf{Carga y análisis exploratorio.} Se cargó cada imagen en
+            formato RGB y se inspeccionó su histograma en los canales RGB y en
+            escala de grises, registrando el rango de intensidades, la media y la
+            desviación típica a fin de caracterizar la distribución tonal de
+            partida.
+
+            \item \textbf{Ajuste de intensidad (Paso~1).} Para la
+            imagen~1187 se aplicó corrección gamma con $\gamma = 0{,}40$; para las
+            imágenes~1321, 1457 y~1619 se aplicó la transformación logarítmica
+            normalizada. En ambos casos la salida se recortó al rango $[0, 255]$
+            y se almacenó como imagen entera sin signo de 8~bits. Esta etapa tiene
+            como propósito redistribuir la información de luminancia hacia un rango
+            de intensidades más amplio y perceptualmente más uniforme.
+
+            \item \textbf{Procesado del histograma (Paso~2).} Sobre la imagen
+            resultante del Paso~1 se aplicó CLAHE en el espacio CIE-Lab,
+            actuando exclusivamente sobre el canal~$L^*$, con
+            clipLimit\,=\,2{,}0 y tileGridSize\,=\,8\,×\,8. Esta etapa mejora el
+            contraste local de forma adaptativa, revelando detalles de textura que
+            el ajuste global de intensidad no es capaz de recuperar por sí solo.
+
+            \item \textbf{Validación.} La evaluación se realizó sobre
+            el canal~$L^*$ de CIE-Lab de cada etapa del flujo (original,
+            Paso~1 y Paso~2). Se visualizaron histogramas y funciones de
+            distribución acumulada (CDF) para cada imagen, permitiendo valorar
+            de manera cualitativa el efecto de cada transformación sobre la
+            distribución tonal y el contraste local.
+        \end{enumerate}
 
 %----------------------------------------------------------
 
 \section{Resultados}
 
-    % TODO: Incluir el análisis comparativo antes/después del procesamiento.
-    % Utilizar tablas, gráficos y figuras para mostrar el impacto visual
-    % de cada técnica. Interpretar los cambios en histogramas e indicadores
-    % de contraste, destacando la visibilidad de detalles y la eliminación de ruido.
+    Para cada imagen se presentan la comparativa visual de las tres etapas
+    del flujo (original, Paso~1 y Paso~2), junto con los histogramas del
+    canal~$L^*$ y sus funciones de distribución acumulada (CDF).
+
+    \subsection{Imagen 1187 -- Corrección Gamma + CLAHE LAB}
+
+        La imagen~1187 presentaba la distribución de intensidades más concentrada
+        en el extremo oscuro del conjunto, con prácticamente el total de los
+        píxeles por debajo del nivel~20. La corrección gamma con
+        $\gamma = 0{,}40$ produce una expansión agresiva del rango tonal que
+        recupera estructura visible en regiones de muy baja luminancia. Al
+        carecer la escena de fuentes de luz directas, el realce provoca cierta
+        saturación en las escasas zonas con niveles de gris más elevados,
+        generando halos perceptibles en los bordes de objetos iluminados
+        \textemdash limitación inherente al uso de valores de gamma muy bajos
+        en imágenes con rango dinámico reducido\textemdash{}. La aplicación
+        posterior de CLAHE LAB atenúa parcialmente este efecto al limitar la
+        ganancia local, mejorando el contraste de textura sin amplificar el
+        ruido de manera global. El histograma resultante muestra una
+        redistribución hacia valores medios-altos y una CDF más próxima a la
+        diagonal, indicativa de mayor aprovechamiento del rango dinámico
+        disponible.
+
+        \begin{figure}[t]
+            \centering
+            \includegraphics[width=1.02\textwidth]{figures/fig_1187_visual.png}
+            \caption{Imagen~1187: comparativa visual por etapa. De izquierda a
+            derecha: original, Paso~1 (corrección gamma, $\gamma = 0{,}40$) y
+            Paso~2 (CLAHE LAB, clip\,=\,2{,}0, tile\,=\,$8\times8$).}
+            \label{fig:1187_visual}
+        \end{figure}
+
+        \begin{figure}[t]
+            \centering
+            \includegraphics[width=1.02\textwidth]{figures/fig_1187_hist.png}
+            \caption{Imagen~1187: histogramas y CDF del
+            canal~$L^*$ para cada etapa del flujo.}
+            \label{fig:1187_hist}
+        \end{figure}
+
+    \subsection{Imagen 1321 -- Transformación Logarítmica + CLAHE LAB}
+
+        La transformación logarítmica aplicada a la imagen~1321 produce un
+        realce progresivo que comprime los tonos altos en mayor medida que la
+        corrección gamma, siendo especialmente efectiva para expandir el rango
+        útil en imágenes con una distribución dominada por píxeles oscuros pero
+        con presencia de zonas de iluminación media. La posterior aplicación de
+        CLAHE LAB incrementa el contraste local de manera adaptativa. Sin
+        embargo, la combinación de ambas técnicas puede introducir un grano fino
+        visible en las regiones de baja luminancia, efecto característico de la
+        amplificación del ruido cuántico en escenas nocturnas cuando el ajuste
+        tonal eleva el nivel de intensidad de base.
+
+        \begin{figure}[t]
+            \centering
+            \includegraphics[width=1.02\textwidth]{figures/fig_1321_visual.png}
+            \caption{Imagen~1321: comparativa visual por etapa. De izquierda a
+            derecha: original, Paso~1 (transformación logarítmica) y
+            Paso~2 (CLAHE LAB, clip\,=\,2{,}0, tile\,=\,$8\times8$).}
+            \label{fig:1321_visual}
+        \end{figure}
+
+        \begin{figure}[t]
+            \centering
+            \includegraphics[width=1.02\textwidth]{figures/fig_1321_hist.png}
+            \caption{Imagen~1321: histogramas y CDF del canal~$L^*$ por etapa.}
+            \label{fig:1321_hist}
+        \end{figure}
+
+    \subsection{Imagen 1457 -- Transformación Logarítmica + CLAHE LAB}
+
+        La imagen~1457 presentaba unas condiciones de iluminación ligeramente
+        superiores al resto, lo que se traduce en una respuesta más equilibrada
+        de la transformación logarítmica: el realce en los tonos oscuros es
+        apreciable sin que los tonos medios resulten excesivamente saturados.
+        El CLAHE LAB refuerza esta mejora al redistribuir el contraste
+        localmente, revelando detalles de textura en calzada, arbolado y
+        elementos laterales de la escena.
+
+        \begin{figure}[t]
+            \centering
+            \includegraphics[width=1.02\textwidth]{figures/fig_1457_visual.png}
+            \caption{Imagen~1457: comparativa visual por etapa. De izquierda a
+            derecha: original, Paso~1 (transformación logarítmica) y
+            Paso~2 (CLAHE LAB, clip\,=\,2{,}0, tile\,=\,$8\times8$).}
+            \label{fig:1457_visual}
+        \end{figure}
+
+        \begin{figure}[t]
+            \centering
+            \includegraphics[width=1.02\textwidth]{figures/fig_1457_hist.png}
+            \caption{Imagen~1457: histogramas y CDF del canal~$L^*$ por etapa.}
+            \label{fig:1457_hist}
+        \end{figure}
+
+    \subsection{Imagen 1619 -- Transformación Logarítmica + CLAHE LAB}
+
+        La imagen~1619 combina zonas de iluminación intermedia con regiones
+        oscuras bien definidas. La transformación logarítmica expande el
+        histograma de forma uniforme, mientras que el CLAHE LAB introduce una
+        mejora local que hace perceptibles detalles de textura previamente
+        ocultos. Al igual que en las imágenes~1321 y~1457, la etapa CLAHE
+        introduce un grano fino en las regiones más oscuras, efecto más
+        contenido en esta imagen gracias a su mayor nivel de luminancia de
+        partida.
+
+        \begin{figure}[t]
+            \centering
+            \includegraphics[width=1.02\textwidth]{figures/fig_1619_visual.png}
+            \caption{Imagen~1619: comparativa visual por etapa. De izquierda a
+            derecha: original, Paso~1 (transformación logarítmica) y
+            Paso~2 (CLAHE LAB, clip\,=\,2{,}0, tile\,=\,$8\times8$).}
+            \label{fig:1619_visual}
+        \end{figure}
+
+        \begin{figure}[t]
+            \centering
+            \includegraphics[width=1.02\textwidth]{figures/fig_1619_hist.png}
+            \caption{Imagen~1619: histogramas y CDF del canal~$L^*$ por etapa.}
+            \label{fig:1619_hist}
+        \end{figure}
+
+    \FloatBarrier
+    \subsection{Justificación de las técnicas seleccionadas}
+
+        Las técnicas aplicadas en este laboratorio ---corrección gamma,
+        transformación logarítmica y CLAHE--- se seleccionaron porque
+        abordan la causa raíz del problema en imágenes de baja iluminación:
+        la compresión de información tonal en el extremo oscuro del
+        histograma y la ausencia de contraste local. Frente a ellas, las
+        operaciones elementales de intensidad disponibles en los cuadernos
+        de referencia ---suma o resta de una constante ($s = r + c$),
+        inversión ($s = 255 - r$) y escalado lineal--- fueron evaluadas y
+        descartadas como técnica primaria de realce por las siguientes
+        razones.
+
+        Las operaciones de suma y resta de una constante desplazan
+        uniformemente el nivel de gris de todos los píxeles por igual,
+        sin tener en cuenta el contenido local de la imagen. En escenas
+        nocturnas con distribución muy sesgada, este desplazamiento
+        uniforme satura rápidamente las zonas ya iluminadas y deja sin
+        mejorar los píxeles más oscuros, precisamente los que contienen
+        la información de interés. La corrección gamma y la transformación
+        logarítmica, en cambio, redistribuyen la información de forma
+        no lineal: aplican un gradiente de realce mayor en las regiones
+        de baja intensidad y uno menor en las regiones altas, maximizando
+        así el aprovechamiento del rango dinámico disponible sin inducir
+        saturación. CLAHE complementa esta estrategia operando de forma
+        adaptativa a nivel local, lo que le permite revelar detalles de
+        textura que ninguna transformación global ---lineal o no
+        lineal--- es capaz de recuperar por sí sola.
 
 %----------------------------------------------------------
 
 \section{Conclusiones}
 
-    % TODO: Sintetizar los principales hallazgos obtenidos. Valorar la eficacia
-    % de cada técnica de mejora, señalar sus limitaciones (p. ej., generación de
-    % artefactos) e identificar qué métodos resultaron más efectivos según las
-    % imágenes. Proponer mejoras o líneas futuras de investigación.
+    El presente laboratorio demuestra que un flujo de mejora en dos etapas
+    encadenadas \textemdash ajuste de intensidad seguido de CLAHE LAB\textemdash{}
+    es capaz de incrementar sustancialmente la calidad visual de imágenes
+    nocturnas de baja iluminación, tal como se aprecia en la inspección
+    comparativa de imágenes, histogramas y CDF.
+
+    En cuanto a la eficacia de cada técnica, la corrección gamma resulta
+    idónea para imágenes con distribución de intensidades extremadamente
+    concentrada en el extremo oscuro (imagen~1187), gracias a su capacidad de
+    expandir de forma agresiva los tonos muy bajos. No obstante, esta agresividad
+    conlleva la limitación más relevante observada: la saturación y el
+    efecto de halo en los bordes de las escasas zonas iluminadas,
+    consecuencia directa del uso de valores de $\gamma$ muy reducidos en escenas
+    con rango dinámico exiguo. Para las imágenes con mayor variedad tonal
+    (1321, 1457 y 1619), la transformación logarítmica ofrece un realce más
+    suave y controlado que evita la sobreexposición, siendo preferible en
+    presencia de fuentes de luz visibles.
+
+    La aplicación de CLAHE LAB como segunda etapa aporta mejoras consistentes
+    en todos los casos, al redistribuir el contraste de forma adaptativa sin
+    alterar la cromaticidad de la imagen. Su principal limitación es la
+    introducción de grano fino en las regiones de muy baja luminancia, efecto
+    especialmente visible en las imágenes procesadas con transformación
+    logarítmica, donde el primer paso eleva el nivel de ruido cuántico de base.
+
+    Como líneas de mejora futura, se propone: (i)~la optimización automática
+    del parámetro $\gamma$ o de la constante $c$ en función del percentil de
+    intensidad de la imagen; (ii)~la incorporación de una etapa de reducción
+    de ruido previa o posterior al CLAHE para mitigar el efecto de grano;
+    y (iii)~la exploración de métodos de mejora basados en aprendizaje
+    profundo, como los modelos de estimación retinex o las redes
+    convolucionales entrenadas específicamente en conjuntos de datos de
+    escenas nocturnas como \textit{DARK FACE}~\cite{yang2020darkface}.
 
 %----------------------------------------------------------
 
 \section*{Declaración sobre el uso de IA}
 \addcontentsline{toc}{section}{Declaración sobre el uso de IA}
 
-    % TODO: Especificar con rigor y transparencia si se han utilizado herramientas
-    % de inteligencia artificial (p. ej., ChatGPT, Copilot, Grammarly u otras),
-    % indicando el propósito de su uso, el ajuste a las normas éticas y la
-    % contribución crítica propia. En caso de no haber utilizado IA generativa,
-    % indicarlo explícitamente y de forma razonada.
+    En la elaboración del presente informe se han utilizado las siguientes
+    herramientas de inteligencia artificial:
+
+    \begin{itemize}
+        \item \textbf{NotebookLM} (Google, 2024): empleado como asistente de
+        consulta sobre el temario de la asignatura. Se utilizó para formular
+        preguntas sobre conceptos teóricos del procesamiento digital de imágenes
+        \textemdash transformaciones de intensidad, ecualización de histograma y
+        CLAHE\textemdash{} y contrastar su comprensión con los materiales
+        proporcionados por el profesorado. En ningún caso se delegó en esta
+        herramienta la redacción de contenidos ni la interpretación de resultados
+        experimentales.
+
+        \item \textbf{GitHub Copilot} (Microsoft/OpenAI, 2024): utilizado en dos
+        contextos diferenciados. Por un lado, como asistente de edición durante la
+        maquetación del documento en \LaTeX{}, para tareas de formato
+        \textemdash estructura de tablas, ajuste de entornos y corrección de
+        errores de compilación\textemdash{}. Por otro lado, como apoyo en el
+        desarrollo del cuaderno de laboratorio (Jupyter Notebook), asistiendo en
+        la creación de funciones auxiliares de visualización, exportación de
+        figuras y resolución de errores de ejecución. En ambos casos, la lógica del
+        flujo de procesamiento, la selección de parámetros y la interpretación
+        de los resultados son de autoría propia.
+    \end{itemize}
+
+    El uso de herramientas de IA conlleva limitaciones que el autor ha tenido
+    presentes a lo largo de todo el proceso. Los modelos de lenguaje pueden
+    generar contenido plausible pero incorrecto ---denominado \textit{alucinación}
+    en la literatura especializada---, y el código sugerido por asistentes como
+    Copilot puede contener errores sutiles de lógica o de rendimiento que no son
+    evidentes a primera vista. Por ello, cada fragmento de código generado con
+    asistencia automatizada fue revisado, comprendido y verificado
+    funcionalmente antes de su incorporación al cuaderno. Asimismo, las
+    explicaciones conceptuales obtenidas mediante NotebookLM fueron contrastadas
+    con los materiales docentes de la asignatura y con las referencias
+    bibliográficas citadas en este informe.
+
+    Existe también el riesgo de que las herramientas de IA introduzcan sesgos
+    implícitos en las decisiones de diseño: preferencia por ciertas arquitecturas
+    de código, parámetros por defecto o enfoques metodológicos que no
+    necesariamente son los más adecuados para el problema concreto que se
+    aborda. Para mitigar este riesgo, todas las decisiones técnicas relevantes
+    ---elección de técnicas, selección de parámetros, estructura del flujo de
+    procesamiento--- se tomaron razonando desde los fundamentos teóricos de la
+    asignatura, sin delegar en las sugerencias automáticas más allá de su
+    función instrumental.
+
+    El diseño experimental, la selección y justificación de los parámetros, la
+    interpretación de los resultados y las conclusiones del trabajo son de autoría
+    propia. El uso de las herramientas anteriores se ha realizado de forma
+    transparente, conforme a las normas éticas de integridad académica, y en ningún
+    momento ha sustituido el juicio crítico ni el trabajo intelectual del autor.
 
 %----------------------------------------------------------
 
