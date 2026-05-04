@@ -559,10 +559,11 @@
 \RequirePackage{csquotes}
 \RequirePackage[
 	backend=biber,
-	style=ieee,
-	sorting=ynt,
-	citestyle=numeric-comp
+  style=apa,
+  sorting=nyt
 ]{biblatex}
+
+\DeclareLanguageMapping{spanish}{spanish-apa}
 
 \addbibresource{rho.bib}
 
